@@ -1,9 +1,44 @@
-import { CollectionConfig } from 'payload/types'
+import type { CollectionConfig } from 'payload'
 
 export const Expenses: CollectionConfig = {
   slug: 'expenses',
   access: {
-    read: () => true,
+    read: ({ req }) => {
+      if (!req.user) return false
+      return {
+        user: {
+          equals: req.user.id,
+        },
+      }
+    },
+    create: ({ req }) => Boolean(req.user),
+    update: ({ req }) => {
+      if (!req.user) return false
+      return {
+        user: {
+          equals: req.user.id,
+        },
+      }
+    },
+    delete: ({ req }) => {
+      if (!req.user) return false
+      return {
+        user: {
+          equals: req.user.id,
+        },
+      }
+    },
+  },
+  hooks: {
+    beforeChange: [
+      ({ data, req }) => {
+        if (!req.user) return data
+        return {
+          ...data,
+          user: req.user.id,
+        }
+      },
+    ],
   },
   admin: {
     useAsTitle: 'title',
@@ -38,6 +73,15 @@ export const Expenses: CollectionConfig = {
       type: 'date',
       defaultValue: () => new Date().toISOString(),
       label: 'Дата',
+    },
+    {
+      name: 'user',
+      type: 'relationship',
+      relationTo: 'users',
+      required: true,
+      admin: {
+        readOnly: true,
+      },
     },
   ],
 }

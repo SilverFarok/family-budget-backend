@@ -171,6 +171,7 @@ export interface Expense {
   amount: number;
   category: 'Продукти' | 'Транспорт' | 'Дім' | "Здоров'я" | 'Інше';
   createdAt: string;
+  user: string | User;
   updatedAt: string;
 }
 /**
@@ -300,6 +301,7 @@ export interface ExpensesSelect<T extends boolean = true> {
   amount?: T;
   category?: T;
   createdAt?: T;
+  user?: T;
   updatedAt?: T;
 }
 /**
