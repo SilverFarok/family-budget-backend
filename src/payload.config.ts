@@ -13,6 +13,27 @@ import { Media } from './collections/Media'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+const parseOrigins = (value?: string): string[] =>
+  (value ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+
+const configuredOrigins = Array.from(
+  new Set(
+    [
+      ...parseOrigins(process.env.CORS_ORIGINS),
+      ...parseOrigins(process.env.FRONTEND_URL),
+      ...parseOrigins(process.env.NEXT_PUBLIC_SERVER_URL),
+    ],
+  ),
+)
+
+const allowedOrigins =
+  configuredOrigins.length > 0
+    ? configuredOrigins
+    : ['http://localhost:3000', 'http://127.0.0.1:3000']
+
 export default buildConfig({
   admin: {
     user: Users.slug,
@@ -29,6 +50,8 @@ export default buildConfig({
   db: mongooseAdapter({
     url: process.env.DATABASE_URI || '',
   }),
+  cors: allowedOrigins,
+  csrf: allowedOrigins,
   sharp,
   plugins: [],
 })
