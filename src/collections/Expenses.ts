@@ -1,41 +1,90 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, PayloadRequest } from 'payload'
+
+const extractUserIds = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map((item) => {
+      if (!item) return null
+      if (typeof item === 'string' || typeof item === 'number') return String(item)
+      if (typeof item === 'object' && 'id' in item && item.id) return String(item.id)
+      return null
+    })
+    .filter((item): item is string => Boolean(item))
+}
+
+const getVisibleUserIds = async (req: PayloadRequest) => {
+  if (!req.user) return []
+
+  const currentUser = (await req.payload.findByID({
+    collection: 'users',
+    id: String(req.user.id),
+    depth: 0,
+    overrideAccess: false,
+    req,
+    user: req.user,
+  })) as { connections?: unknown }
+
+  return Array.from(new Set([String(req.user.id), ...extractUserIds(currentUser.connections)]))
+}
 
 export const Expenses: CollectionConfig = {
   slug: 'expenses',
   access: {
-    read: ({ req }) => {
-      if (!req.user) return false
+    read: async ({ req }) => {
+      const visibleUserIds = await getVisibleUserIds(req)
+      if (!visibleUserIds.length) return false
+
       return {
         user: {
-          equals: req.user.id,
+          in: visibleUserIds,
         },
       }
     },
     create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => {
-      if (!req.user) return false
+    update: async ({ req }) => {
+      const visibleUserIds = await getVisibleUserIds(req)
+      if (!visibleUserIds.length) return false
+
       return {
         user: {
-          equals: req.user.id,
+          in: visibleUserIds,
         },
       }
     },
-    delete: ({ req }) => {
-      if (!req.user) return false
+    delete: async ({ req }) => {
+      const visibleUserIds = await getVisibleUserIds(req)
+      if (!visibleUserIds.length) return false
+
       return {
         user: {
-          equals: req.user.id,
+          in: visibleUserIds,
         },
       }
     },
   },
   hooks: {
     beforeChange: [
-      ({ data, req }) => {
+      ({ data, operation, originalDoc, req }) => {
         if (!req.user) return data
+
+        if (operation === 'create') {
+          return {
+            ...data,
+            user: req.user.id,
+          }
+        }
+
+        if (operation === 'update') {
+          return {
+            ...data,
+            user: originalDoc?.user,
+          }
+        }
+
         return {
           ...data,
-          user: req.user.id,
+          user: originalDoc?.user ?? req.user.id,
         }
       },
     ],

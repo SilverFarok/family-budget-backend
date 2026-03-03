@@ -124,6 +124,10 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: string;
+  /**
+   * Users connected by invite flow
+   */
+  connections?: (string | User)[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -257,6 +261,7 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  connections?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
